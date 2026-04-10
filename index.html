@@ -3,123 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Core Staff in a Box | Founder Hub</title>
+    <title>Core Staff in a Box - Draggable Founder Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --glow: #6366f1; }
         body { background-color: #020617; color: #f8fafc; overflow: hidden; height: 100vh; font-family: 'Inter', sans-serif; }
-        .node { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: absolute; z-index: 20; }
-        .node-active { filter: drop-shadow(0 0 15px var(--glow)); border-color: var(--glow) !important; scale: 1.1; }
-        .connector { stroke: #1e293b; stroke-width: 2; stroke-dasharray: 6; fill: none; transition: all 0.5s ease; }
+        
+        /* Node Styling - Added Grab Cursor */
+        .node { 
+            position: absolute; 
+            z-index: 20; 
+            cursor: grab; 
+            transition: scale 0.2s ease, filter 0.2s ease; 
+        }
+        .node:active { cursor: grabbing; scale: 1.1; z-index: 30; } /* Brings active node to front */
+        .node-active { filter: drop-shadow(0 0 15px var(--glow)); border-color: var(--glow) !important; }
+
+        /* SVG Connection Styling */
+        .connector { stroke: #1e293b; stroke-width: 2; stroke-dasharray: 6; fill: none; transition: stroke 0.3s ease; }
         .connector-active { stroke: var(--glow); stroke-width: 3; stroke-dasharray: 10; animation: dash 1s linear infinite; filter: drop-shadow(0 0 5px var(--glow)); }
+        
         @keyframes dash { to { stroke-dashoffset: -20; } }
-        #chatbox { height: calc(100vh - 500px); scrollbar-width: none; }
+        
+        /* UI Elements */
+        #chatbox { height: calc(100vh - 550px); min-height: 150px; scrollbar-width: none; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .no-drag-select { -webkit-user-drag: none; user-select: none; }
     </style>
 </head>
-<body class="p-4 flex flex-col gap-4">
+<body class="p-3 flex flex-col gap-3">
 
-    <header class="flex justify-between items-center glass p-4 rounded-2xl">
+    <header class="flex justify-between items-center glass p-3 px-5 rounded-xl">
         <div class="flex items-center gap-3">
-            <div class="bg-indigo-600 px-3 py-1 rounded text-white font-black italic">CORE</div>
-            <h1 class="text-sm font-bold uppercase tracking-widest opacity-80">Staff in a Box</h1>
+            <div class="bg-indigo-600 px-3 py-1 rounded text-white font-black italic tracking-tighter">CORE</div>
+            <h1 class="text-xs font-bold uppercase tracking-widest opacity-80">Founder Executive Suite</h1>
         </div>
-        <div class="flex gap-2">
-            <input type="password" id="apiKey" placeholder="GMI Key" class="bg-black/40 border border-white/10 rounded-lg px-3 py-1 text-xs outline-none focus:border-indigo-500">
-            <button onclick="saveKey()" class="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg text-xs font-bold transition-all">Save</button>
-            <button onclick="toggleFS()" class="bg-indigo-600/20 text-indigo-400 p-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-            </button>
+        <div class="flex items-center gap-2">
+            <input type="password" id="apiKey" placeholder="GMI Serving Key" class="bg-black/40 border border-white/10 rounded-lg px-3 py-1 text-xs outline-none focus:border-indigo-500">
+            <button onclick="saveKey()" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded-lg text-xs font-bold transition-all">Save</button>
         </div>
     </header>
 
-    <div class="relative w-full h-[320px] flex items-center justify-center overflow-hidden glass rounded-3xl border-white/5">
-        <svg id="network" class="absolute inset-0 w-full h-full pointer-events-none">
+    <div id="visualizer-hub" class="relative w-full h-[380px] glass rounded-3xl border-white/5 overflow-hidden flex items-center justify-center">
+        
+        <svg id="network-svg" class="absolute inset-0 w-full h-full pointer-events-none">
             </svg>
 
-        <div id="soleil" class="node w-24 h-24 rounded-full border-4 border-indigo-500/30 overflow-hidden flex flex-col items-center justify-center bg-indigo-900 shadow-2xl">
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Soleil&backgroundColor=b6e3f4" class="w-full h-full object-cover">
-            <div class="absolute bottom-0 w-full bg-indigo-600 text-[8px] text-center py-0.5 font-bold uppercase">Soleil</div>
+        <div id="soleil-node" class="node w-24 h-24 rounded-full border-4 border-indigo-500/30 overflow-hidden flex flex-col items-center justify-center bg-indigo-900 shadow-2xl relative">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Soleil&backgroundColor=b6e3f4" class="w-full h-full object-cover no-drag-select">
+            <div class="absolute bottom-0 w-full bg-indigo-600 text-[8px] text-center py-0.5 font-bold uppercase no-drag-select">Soleil</div>
         </div>
 
-        <div id="satellites-container"></div>
+        <div id="nodes-container">
+            </div>
+
     </div>
 
-    <div class="flex-1 flex gap-4 overflow-hidden">
-        <div class="w-64 glass rounded-2xl p-4 hidden md:flex flex-col gap-2">
-            <h3 class="text-[10px] font-black uppercase tracking-tighter opacity-40">Agentic Trace</h3>
-            <div id="traceLog" class="text-[10px] font-mono space-y-2 opacity-60 overflow-y-auto">
-                <div>[SYSTEM] Boardroom ready.</div>
-            </div>
-        </div>
-
-        <div class="flex-1 flex flex-col gap-3">
-            <div id="chatbox" class="glass rounded-2xl p-6 overflow-y-auto space-y-4">
-                <div class="text-center opacity-30 mt-10">Start a strategic session with your C-Suite.</div>
+    <div class="flex-1 flex gap-3 overflow-hidden">
+        
+        <div class="flex-1 flex flex-col gap-3 glass rounded-2xl p-4">
+            <div id="chatbox" class="overflow-y-auto space-y-4 px-2">
+                <div class="text-center opacity-30 mt-20 flex flex-col items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    <p class="font-light text-sm">Welcome to the Virtual War Room, Founder.</p>
+                    <p class="text-[10px] uppercase tracking-widest bg-white/5 px-2 py-1 rounded">Ask Soleil a complex strategy question.</p>
+                </div>
             </div>
             
-            <div class="glass rounded-2xl p-3 flex items-center gap-3">
-                <textarea id="userInput" placeholder="Ask the Founder's Suite..." rows="1" class="flex-1 bg-transparent border-none outline-none resize-none px-2 py-2 text-sm"></textarea>
+            <div class="border-t border-white/10 pt-3 flex items-center gap-3">
+                <textarea id="userInput" placeholder="Ask the Founder's Suite..." rows="1" class="flex-1 bg-transparent border-none outline-none resize-none px-2 py-2 text-sm focus:ring-1 focus:ring-indigo-500/50 rounded-lg transition-all"></textarea>
                 <button onclick="send()" id="sendBtn" class="bg-indigo-600 hover:bg-indigo-500 p-3 rounded-xl transition-all shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                    <svg id="sendIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                    <svg id="loadingIcon" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 </button>
             </div>
         </div>
+
     </div>
 
     <script>
         const specialists = [
-            { name: "Elon", role: "Engineering", seed: "Elon", angle: 0 },
-            { name: "Isaac", role: "Finance", seed: "Isaac", angle: 72 },
-            { name: "Steve", role: "Marketing", seed: "Steve", angle: 144 },
-            { name: "Harvey", role: "Legal", seed: "Harvey", angle: 216 },
-            { name: "Leonardo", role: "Architecture", seed: "Leonardo", angle: 288 }
+            { name: "Elon", role: "Engineering", seed: "Elon", defaultX: 180, defaultY: 0 },
+            { name: "Isaac", role: "Finance", seed: "Isaac", defaultX: 120, defaultY: 100 },
+            { name: "Steve", role: "Marketing", seed: "Steve", defaultX: -120, defaultY: 100 },
+            { name: "Harvey", role: "Legal", seed: "Harvey", defaultX: -180, defaultY: 0 },
+            { name: "Leonardo", role: "Architecture", seed: "Leonardo", defaultX: 0, defaultY: -120 }
         ];
 
         let messages = [];
 
         window.onload = () => {
-            const container = document.getElementById('satellites-container');
-            const svg = document.getElementById('network');
-            const radius = 120;
-            const centerX = window.innerWidth / 2; // Approximate center of container
-
+            if(localStorage.getItem('gmi_key')) document.getElementById('apiKey').value = localStorage.getItem('gmi_key');
+            
+            // Initialize Nodes
+            const container = document.getElementById('nodes-container');
+            const svg = document.getElementById('network-svg');
+            
             specialists.forEach(s => {
-                const rad = (s.angle * Math.PI) / 180;
-                const x = Math.cos(rad) * radius;
-                const y = Math.sin(rad) * radius;
-
-                // Create Node
+                // 1. Create Draggable DOM Node
                 const div = document.createElement('div');
                 div.id = `node-${s.name}`;
-                div.className = "node w-16 h-16 rounded-full border-2 border-white/10 overflow-hidden bg-slate-800 flex flex-col items-center justify-center";
-                div.style.transform = `translate(${x}px, ${y}px)`;
-                div.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${s.seed}" class="w-full h-full opacity-80"><div class="absolute bottom-0 w-full bg-black/60 text-[7px] text-center py-0.5 font-bold uppercase">${s.name}</div>`;
+                div.className = "node w-16 h-16 rounded-full border-2 border-white/10 overflow-hidden bg-slate-800 flex flex-col items-center justify-center no-drag-select shadow-lg";
+                // Set default radial positions, but make it absolute
+                div.style.transform = `translate(calc(50vw + ${s.defaultX}px - 50%), calc(190px + ${s.defaultY}px - 50%))`;
+                
+                div.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${s.seed}" class="w-full h-full opacity-80 no-drag-select"><div class="absolute bottom-0 w-full bg-black/60 text-[7px] text-center py-0.5 font-bold uppercase no-drag-select">${s.name}</div>`;
+                
                 container.appendChild(div);
 
-                // Create SVG Line (Calculated relative to center)
+                // 2. Add Draggable Logic
+                makeElementDraggable(div, s.name);
+
+                // 3. Create SVG Connection (Lines)
                 const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 line.setAttribute("id", `line-${s.name}`);
                 line.setAttribute("class", "connector");
-                line.setAttribute("x1", "50%");
-                line.setAttribute("y1", "50%");
-                line.setAttribute("x2", `calc(50% + ${x}px)`);
-                line.setAttribute("y2", `calc(50% + ${y}px)`);
                 svg.appendChild(line);
             });
 
-            if(localStorage.getItem('gmi_key')) document.getElementById('apiKey').value = localStorage.getItem('gmi_key');
+            // Initial line draw
+            updateConnections();
+            window.addEventListener('resize', updateConnections); // Redraw on window resize
         };
 
-        function saveKey() { localStorage.setItem('gmi_key', document.getElementById('apiKey').value); alert("Stored."); }
-        function toggleFS() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+        // --- Core Drag & Drop Logic (Single File optimized) ---
+        function makeElementDraggable(elmnt, name) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            elmnt.onmousedown = dragMouseDown;
 
-        function logTrace(msg) {
-            const trace = document.getElementById('traceLog');
-            trace.innerHTML += `<div>> ${msg}</div>`;
-            trace.scrollTop = trace.scrollHeight;
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                // get the mouse cursor position at startup:
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                // call a function whenever the cursor moves:
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                // calculate the new cursor position:
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                // set the element's new position:
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+                elmnt.style.transform = "none"; // Stop using default translation once moved
+
+                // Redraw connections immediately while dragging
+                updateConnections();
+            }
+
+            function closeDragElement() {
+                // stop moving when mouse button is released:
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
         }
 
+        // --- Recalculate all SVG lines based on live DOM positions ---
+        function updateConnections() {
+            const soleil = document.getElementById('soleil-node');
+            const hub = document.getElementById('visualizer-hub');
+            
+            // Get precise center of the hub and soleil
+            const hubRect = hub.getBoundingClientRect();
+            const sRect = soleil.getBoundingClientRect();
+            
+            // Soleil Center (Anchor Point)
+            const sx = (sRect.left + sRect.width / 2) - hubRect.left;
+            const sy = (sRect.top + sRect.height / 2) - hubRect.top;
+
+            specialists.forEach(s => {
+                const node = document.getElementById(`node-${s.name}`);
+                const line = document.getElementById(`line-${s.name}`);
+                if(!node || !line) return;
+
+                const nRect = node.getBoundingClientRect();
+                
+                // Satellite Node Center
+                const nx = (nRect.left + nRect.width / 2) - hubRect.left;
+                const ny = (nRect.top + nRect.height / 2) - hubRect.top;
+
+                // Update SVG attributes dynamically
+                line.setAttribute("x1", sx);
+                line.setAttribute("y1", sy);
+                line.setAttribute("x2", nx);
+                line.setAttribute("y2", ny);
+            });
+        }
+
+        function saveKey() { localStorage.setItem('gmi_key', document.getElementById('apiKey').value); alert("GMI Config Saved."); }
+        
         function togglePulse(name, active) {
             const line = document.getElementById(`line-${name}`);
             const node = document.getElementById(`node-${name}`);
@@ -135,19 +215,27 @@
         async function send() {
             const key = document.getElementById('apiKey').value;
             const input = document.getElementById('userInput').value;
+            const sendBtn = document.getElementById('sendBtn');
+            const sendIcon = document.getElementById('sendIcon');
+            const loadingIcon = document.getElementById('loadingIcon');
+
             if(!input || !key) return;
 
             document.getElementById('chatbox').innerHTML += `<div class="text-right"><span class="glass p-3 rounded-2xl text-sm inline-block max-w-[80%]">${input}</span></div>`;
             document.getElementById('userInput').value = '';
+            document.getElementById('userInput').style.height = 'auto'; // Reset textarea height
 
             const systemPrompt = `You are Soleil, Chief of Staff. You lead Elon (Eng), Isaac (Fin), Steve (Mkt), Harvey (Legal), and Leonardo (Arch). 
-            Coordinate responses. If you mention a specialist's name, use it in ALL CAPS like ELON or ISAAC to trigger the UI sensor.
-            Be concise, strategic, and direct for a Startup Founder.`;
+            Coordinate strategic responses for a Startup Founder. If you mention a specialist's name, use it in ALL CAPS like ELON or HARVEY to trigger the UI connection pulse.
+            Focus on orchestrating their expert opinions.`;
 
             messages.push({ role: "user", content: input });
-            logTrace("Soleil is analyzing prompt...");
             
-            document.getElementById('soleil').classList.add('node-active');
+            // UI Loading State
+            sendBtn.disabled = true;
+            sendIcon.classList.add('hidden');
+            loadingIcon.classList.remove('hidden');
+            document.getElementById('soleil-node').classList.add('node-active');
 
             try {
                 const res = await fetch('https://api.gmi-serving.com/v1/chat/completions', {
@@ -156,32 +244,37 @@
                     body: JSON.stringify({
                         model: "zai-org/GLM-5.1-FP8",
                         messages: [{role: "system", content: systemPrompt}, ...messages],
-                        temperature: 0.7
+                        temperature: 0.7,
+                        max_tokens: 1000
                     })
                 });
 
                 const data = await res.json();
                 const reply = data.choices[0].message.content;
                 
-                // Trigger pulses based on name detection
+                // Scrutinize the text for CAPS names to trigger the connection pulse
                 specialists.forEach(s => {
                     if(reply.toUpperCase().includes(s.name.toUpperCase())) {
                         togglePulse(s.name, true);
-                        logTrace(`Soleil consulting ${s.name}...`);
-                        setTimeout(() => togglePulse(s.name, false), 4000);
+                        // logTrace(`Soleil consulting ${s.name}...`); // Optional, removed for cleaner UI
+                        setTimeout(() => togglePulse(s.name, false), 5000); // Pulse for 5 seconds
                     }
                 });
 
-                document.getElementById('chatbox').innerHTML += `<div class="text-left"><span class="glass border-indigo-500/20 p-4 rounded-2xl text-sm inline-block max-w-[85%]">${reply}</span></div>`;
+                document.getElementById('chatbox').innerHTML += `<div class="text-left"><span class="glass border-indigo-500/20 p-4 rounded-2xl text-sm inline-block max-w-[85%] whitespace-pre-wrap">${reply}</span></div>`;
                 messages.push({ role: "assistant", content: reply });
                 
                 const chat = document.getElementById('chatbox');
                 chat.scrollTop = chat.scrollHeight;
 
             } catch (err) {
-                logTrace("ERROR: Connection failed.");
+                document.getElementById('chatbox').innerHTML += `<div class="text-center text-red-400 text-xs mt-4">[Error: Connection failed. Check GMI Key or Console]</div>`;
             } finally {
-                document.getElementById('soleil').classList.remove('node-active');
+                // UI Complete State
+                sendBtn.disabled = false;
+                sendIcon.classList.remove('hidden');
+                loadingIcon.classList.add('hidden');
+                document.getElementById('soleil-node').classList.remove('node-active');
             }
         }
     </script>
